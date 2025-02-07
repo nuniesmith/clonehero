@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from src.database import init_db
 
 # Import routers
-from src.routes.upload import router as upload_router
+from src.routes.upload_content import router as upload_router
 from src.routes.song_processing import router as song_processing_router
 from src.routes.song_upload import router as song_upload_router
 from src.routes.health import router as health_router
