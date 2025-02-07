@@ -1,0 +1,104 @@
+services:
+  nginx:
+    container_name: clonehero_nginx
+    image: nuniesmith/clonehero:nginx
+    environment:
+      TZ: "America/Toronto"
+    ports:
+      - "80:80"
+      - "443:443"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: always
+
+  db:
+    container_name: clonehero_db
+    image: nuniesmith/clonehero:postgres
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "clonehero", "-d", "clonehero"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  sync:
+    container_name: clonehero_sync
+    image: nuniesmith/clonehero:sync
+    env_file:
+      - .env
+    volumes:
+      - ./data/clonehero_content:/var/syncthing/clonehero_content:rw
+    ports:
+      - "8384:8384"
+      - "22000:22000/tcp"
+      - "21027:21027/udp"
+    restart: unless-stopped
+    command: ["-home", "/var/syncthing/config"]
+
+  ch_server:
+    container_name: ch_server
+    image: nuniesmith/clonehero:server
+    env_file:
+      - .env
+    ports:
+      - "14242:14242"
+    restart: unless-stopped
+
+
+  backend:
+    container_name: clonehero_backend
+    image: nuniesmith/clonehero:backend
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    env_file:
+      - .env
+    expose:
+      - "8001"
+    command: ["sh", "-c", "sleep 5 && python src/worker.py"]
+    restart: unless-stopped
+
+  api:
+    container_name: clonehero_api
+    image: nuniesmith/clonehero:api
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    command: >
+      gunicorn -w 4 -k uvicorn.workers.UvicornWorker src.main:app --bind 0.0.0.0:8000
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl --fail http://localhost:8000/health || exit 1"]
+      interval: 30s
+      start_period: 60s
+      retries: 3
+    restart: unless-stopped
+
+  frontend:
+    container_name: clonehero_frontend
+    image: nuniesmith/clonehero:frontend
+    depends_on:
+      api:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - "8501:8501"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

@@ -1,0 +1,11 @@
+streamlit
+patool
+gunicorn
+fastapi
+uvicorn
+loguru
+python-multipart
+psycopg2-binary
+requests
+pydantic
+librosa
