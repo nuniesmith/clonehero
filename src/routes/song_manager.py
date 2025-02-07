@@ -9,7 +9,7 @@ import tempfile
 from typing import Dict, Any
 import requests
 from src.services.content_utils import extract_content
-from src.services.song_upload import list_all_songs
+from src.services.song_manager import list_all_songs
 
 router = APIRouter()
 

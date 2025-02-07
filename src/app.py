@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 from loguru import logger
 from src.pages.song_processing import song_processing_page
-from src.pages.song_upload import song_upload_page
+from src.pages.song_manager import song_manager_page
 from src.pages.database_explorer import database_explorer_page
 from src.pages.colors import colors_page
 from src.pages.backgrounds import backgrounds_page
@@ -74,7 +74,7 @@ st.sidebar.write(f"**Status:** {api_status}")
 # Navigation Dictionary for Clean Code
 PAGES = {
     "📁 Database Explorer": database_explorer_page,
-    "📤 Upload Songs": song_upload_page,
+    "📤 Upload Songs": song_manager_page,
     "🎵 Generate Songs": song_processing_page,
     "🎨 Colors": colors_page,
     "🌆 Backgrounds": backgrounds_page,

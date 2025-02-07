@@ -17,7 +17,7 @@ from src.database import init_db
 # Import routers
 from src.routes.upload_content import router as upload_router
 from src.routes.song_processing import router as song_processing_router
-from src.routes.song_upload import router as song_upload_router
+from src.routes.song_manager import router as song_upload_router
 from src.routes.health import router as health_router
 from src.routes.database_explorer import router as database_explorer_router
 

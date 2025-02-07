@@ -8,7 +8,7 @@ import asyncio
 import aiofiles
 from loguru import logger
 from typing import Dict, Any
-from src.services.song_upload import organize_and_add_songs
+from src.services.song_manager import organize_and_add_songs
 from src.services.song_processing import process_song_file
 
 # Base directory for Clone Hero content
