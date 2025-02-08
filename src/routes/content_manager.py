@@ -54,10 +54,7 @@ async def upload_content(
     request: Request,
     file: UploadFile = File(...),
     content_type: str = Form(...)
-) -> Dict[str, Any]:
-    """
-    Upload an archive (zip/rar) or image (png/jpg) for Clone Hero visual content.
-    """
+) -> Dict[str, Any]:  # Ensure return type is Dict
     if content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(status_code=400, detail=f"Invalid content type: {content_type}")
 
@@ -77,15 +74,18 @@ async def upload_content(
         # Extract content and process files
         result = await extract_content(temp_file_path, content_type)
 
-        # If songs, organize and add them to the database
+        # If songs, process further
         if content_type == "songs":
             result = await process_and_store_content(temp_file_path, content_type)
+
+        if not isinstance(result, dict):  # Ensure result is a dictionary
+            raise ValueError(f"Invalid response format from processing functions: {result}")
 
         return result
 
     except Exception as e:
         logger.exception(f"❌ Error processing file {file.filename}: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        return {"status": "error", "message": "Internal Server Error"}
     
     finally:
         try:
@@ -93,7 +93,6 @@ async def upload_content(
             logger.info(f"🗑️ Removed temporary file: {temp_file_path}")
         except FileNotFoundError:
             pass
-
 
 class URLDownloadRequest(BaseModel):
     url: str

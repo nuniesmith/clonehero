@@ -3,17 +3,26 @@ import requests
 from loguru import logger
 from src.utils import API_URL, display_exception
 
-def process_song(file):
+def process_song(file) -> dict:
     """Uploads a song to the backend for processing into Clone Hero format."""
     try:
         files = {"file": file}
         with st.spinner("Uploading and processing song..."):
             response = requests.post(f"{API_URL}/process_song/", files=files, timeout=60)
+        
         response.raise_for_status()
-        return response.json()
+        result = response.json()
+
+        if not isinstance(result, dict):
+            raise ValueError(f"Invalid response format: {result}")
+
+        return result
     except requests.RequestException as e:
         logger.error(f"Failed to process song: {e}")
         return {"error": str(e)}
+    except ValueError as e:
+        logger.error(f"Unexpected response format: {e}")
+        return {"error": "Invalid server response format."}
 
 def song_generation_page():
     """Streamlit UI for processing songs into Clone Hero format."""
@@ -34,7 +43,7 @@ def song_generation_page():
 
         if "error" in result:
             st.error(f"🚨 Error processing song: {result['error']}")
-            display_exception(result["error"])
+            display_exception(result["error"], "An error occurred while processing the song.")
         else:
             st.success("✅ Song processed successfully!")
             st.write(f"🎵 **Generated Notes Chart:** `{result.get('notes_chart', 'N/A')}`")
@@ -43,16 +52,17 @@ def song_generation_page():
             # Ensure download URL is valid before requesting
             notes_chart_url = result.get("notes_chart")
             if notes_chart_url:
-                response = requests.get(notes_chart_url)
-                if response.status_code == 200:
+                try:
+                    response = requests.get(notes_chart_url, timeout=10)
+                    response.raise_for_status()
                     st.download_button(
                         "⬇️ Download notes.chart",
                         data=response.content,
                         file_name="notes.chart",
                         mime="text/plain"
                     )
-                else:
-                    st.error("⚠️ Failed to retrieve the generated notes.chart file.")
+                except requests.RequestException as e:
+                    st.error(f"⚠️ Failed to retrieve the generated notes.chart file: {e}")
 
     st.markdown("---")
     st.subheader("📖 How It Works")
