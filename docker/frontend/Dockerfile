@@ -19,7 +19,7 @@ RUN /opt/venv/bin/pip install --upgrade pip && \
     /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
 # Copy the complete application code
-COPY . /app
+#COPY . /app
 
 ###############################
 # Stage 2: Runtime
@@ -43,7 +43,7 @@ RUN useradd -m appuser
 
 # Copy the virtual environment and application code from the builder stage
 COPY --from=builder /opt/venv /opt/venv
-COPY --from=builder /app /app
+#COPY --from=builder /app /app
 
 # Ensure the necessary directory structure exists
 RUN mkdir -p /app/logs && \

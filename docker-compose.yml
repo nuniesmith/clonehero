@@ -92,21 +92,22 @@ services:
         condition: service_healthy
       ch_server:
         condition: service_started
+    volumes:
+      - ./:/app
+      - logs:/var/log/backend
     env_file:
       - .env
     expose:
       - "${BACKEND_PORT}"
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
-    command: ["sh", "-c", "python src/worker.py"]
+    command: ["sh", "-c", "python src/backend/worker.py"]
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl --fail http://localhost:${BACKEND_PORT}/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-    volumes:
-      - logs:/var/log/backend
 
   api:
     container_name: clonehero_api
@@ -114,6 +115,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - ./:/app
+      - logs:/var/log/api
     env_file:
       - .env
     command: >

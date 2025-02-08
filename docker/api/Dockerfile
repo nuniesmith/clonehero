@@ -21,7 +21,7 @@ RUN /opt/venv/bin/pip install --upgrade pip && \
     /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
 # Copy the API application code
-COPY . /app
+#COPY . /app
 
 ###############################
 # Stage 2: Runtime
@@ -43,7 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy the virtual environment and the application code from the builder stage
 COPY --from=builder /opt/venv /opt/venv
-COPY --from=builder /app /app
+#COPY --from=builder /app /app
 
 # Create a dedicated non-root user and adjust permissions
 RUN useradd -m appuser && \
