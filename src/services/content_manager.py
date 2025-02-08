@@ -57,16 +57,14 @@ def add_content_to_db(title: str, artist: str, album: str, file_path: str, metad
 
     try:
         with get_connection() as conn:
-            with conn.cursor() as cursor:
+            with conn.cursor(cursor_factory=DictCursor) as cursor:
                 cursor.execute(
                     "SELECT id FROM songs WHERE title = %s AND artist = %s AND album = %s",
                     (title, artist, album)
                 )
                 existing_song = cursor.fetchone()
                 if existing_song:
-                    if not getattr(add_content_to_db, "logged", False):  # Prevent duplicate logs
-                        logger.warning(f"⚠️ Duplicate detected, skipping insert: {file_path}")
-                        add_content_to_db.logged = True  # Mark logged to prevent duplicates
+                    logger.warning(f"⚠️ Duplicate detected, skipping insert: {file_path}")
                     return existing_song[0]
 
                 cursor.execute(

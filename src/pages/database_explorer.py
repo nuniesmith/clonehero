@@ -10,22 +10,22 @@ PAGE_SIZE = 10  # Number of songs per page
 def fetch_songs(search_query=None, limit=PAGE_SIZE, offset=0):
     """Fetch all songs from the database with optional search filtering and pagination."""
     try:
-        params = {"search": search_query, "limit": limit, "offset": offset}
+        params = {"search": search_query.strip() if search_query else None, "limit": limit, "offset": offset}
         response = requests.get(f"{API_URL}/songs/", params=params, timeout=30)
         response.raise_for_status()
         return response.json().get("songs", [])
     except requests.RequestException as e:
-        logger.error(f"Failed to fetch songs: {e}")
+        logger.error(f"❌ Failed to fetch songs: {e}")
         return []
 
 def delete_song(song_id):
-    """Delete a song from the database."""
+    """Delete a song from the database and return a success or error response."""
     try:
         response = requests.delete(f"{API_URL}/songs/{song_id}", timeout=30)
         response.raise_for_status()
         return {"success": True}
     except requests.RequestException as e:
-        logger.error(f"Failed to delete song: {e}")
+        logger.error(f"❌ Failed to delete song ID {song_id}: {e}")
         return {"error": str(e)}
 
 def database_explorer_page():
@@ -38,7 +38,7 @@ def database_explorer_page():
         st.session_state.page = 0
 
     # Search and Pagination State
-    search_query = st.text_input("🔍 Search for a song (title, artist, album)", "")
+    search_query = st.text_input("🔍 Search for a song (title, artist, album)", "").strip()
 
     # Reset pagination when a new search is performed
     if search_query != st.session_state.get("last_search", ""):
@@ -60,10 +60,9 @@ def database_explorer_page():
 
             # Show Metadata if available
             metadata = song.get("metadata", {})
-            if metadata:
-                non_empty_metadata = {k: v for k, v in metadata.items() if v}  # Hide empty fields
-                if non_empty_metadata:
-                    st.json(non_empty_metadata, expanded=False)
+            non_empty_metadata = {k: v for k, v in metadata.items() if v}  # Hide empty fields
+            if non_empty_metadata:
+                st.json(non_empty_metadata, expanded=False)
 
             # Delete Button
             if st.button("🗑️ Delete", key=f"delete_{song['id']}"):

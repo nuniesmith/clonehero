@@ -2,7 +2,6 @@ from fastapi import APIRouter, File, UploadFile, Form, HTTPException, Request
 import os
 import aiofiles
 import tempfile
-import asyncio
 import uuid
 import httpx
 from loguru import logger

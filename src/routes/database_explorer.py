@@ -12,19 +12,27 @@ async def fetch_songs(
 ):
     """Fetch all songs from the database with optional search and pagination."""
     try:
-        songs = get_all_songs(search_query=search, limit=limit, offset=offset)
-        return {"total": len(songs), "songs": songs}
+        songs = get_all_songs(search_query=search.strip() if search else None, limit=limit, offset=offset)
+        total_songs = len(songs)
+        
+        if total_songs == 0:
+            return {"message": "⚠️ No songs found.", "total": 0, "songs": []}
+        
+        return {"total": total_songs, "songs": songs}
     except Exception as e:
-        logger.exception(f"Error fetching songs: {e}")
+        logger.exception(f"❌ Error fetching songs: {e}")
         raise HTTPException(status_code=500, detail="Error fetching songs")
 
-@router.delete("/songs/{song_id}", status_code=204)
+@router.delete("/songs/{song_id}")
 async def delete_song(song_id: int):
-    """Delete a song by ID from the database."""
+    """Delete a song by ID from the database, ensuring it exists before deletion."""
     try:
         deleted = delete_song_by_id(song_id)
         if not deleted:
+            logger.warning(f"⚠️ Attempted to delete non-existent song ID {song_id}.")
             raise HTTPException(status_code=404, detail="Song not found")
+        
+        return {"message": f"✅ Song ID {song_id} deleted successfully."}
     except Exception as e:
-        logger.exception(f"Error deleting song ID {song_id}: {e}")
+        logger.exception(f"❌ Error deleting song ID {song_id}: {e}")
         raise HTTPException(status_code=500, detail="Error deleting song")

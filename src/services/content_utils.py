@@ -104,14 +104,16 @@ async def extract_content(file_path: str, content_type: str) -> Dict[str, Any]:
 
     finally:
         shutil.rmtree(temp_extract_dir, ignore_errors=True)  # Cleanup temp dir even on failure
-        
-def list_all_content() -> List[Dict[str, Any]]:
+
+
+async def list_all_content() -> List[Dict[str, Any]]:
     """List all stored content (songs, backgrounds, highways, colors)."""
     try:
-        with get_connection() as conn:
-            with conn.cursor(cursor_factory=DictCursor) as cursor:
-                cursor.execute("SELECT * FROM songs")
-                content = cursor.fetchall()
+        conn = await asyncio.to_thread(get_connection)  # Ensure connection runs asynchronously
+        async with conn:
+            async with conn.cursor(cursor_factory=DictCursor) as cursor:
+                await cursor.execute("SELECT * FROM songs")
+                content = await cursor.fetchall()
 
         return [
             {
@@ -126,4 +128,4 @@ def list_all_content() -> List[Dict[str, Any]]:
         ]
     except Exception as e:
         logger.exception(f"❌ Error listing content: {e}")
-        return []
+        return []  # Always return a list (consistent with function signature)
