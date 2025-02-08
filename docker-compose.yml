@@ -98,6 +98,8 @@ services:
         condition: service_healthy
       db:
         condition: service_healthy
+    volumes:
+      - ./:/app
     env_file:
       - .env
     ports:

@@ -47,7 +47,9 @@ def upload_color_profile(uploaded_file):
 def delete_color_profile(profile_name):
     """Delete a color profile via API request."""
     try:
-        response = requests.delete(f"{API_URL}/delete_content/?content_type=colors&file={profile_name}", timeout=30)
+        response = requests.delete(
+            f"{API_URL}/delete_content/?content_type=colors&file={profile_name}", timeout=30
+        )
         response.raise_for_status()
         st.toast(f"🗑️ Deleted {profile_name}", icon="🗑️")
         st.rerun()

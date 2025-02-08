@@ -59,13 +59,13 @@ def display_songs():
 
     st.subheader(f"📚 Song Library (Page {page + 1}/{total_pages})")
 
-    songs = songs[page * PAGE_SIZE : (page + 1) * PAGE_SIZE]  # Paginate
+    songs_page = songs[page * PAGE_SIZE : (page + 1) * PAGE_SIZE]  # Paginate
 
-    songs.sort(key=lambda s: (s.get('artist', 'N/A').lower(),
-                              s.get('album', 'N/A').lower(),
-                              s.get('title', 'N/A').lower()))
+    songs_page.sort(key=lambda s: (s.get('artist', 'N/A').lower(),
+                                   s.get('album', 'N/A').lower(),
+                                   s.get('title', 'N/A').lower()))
     
-    for artist, artist_group in itertools.groupby(songs, key=lambda s: s.get('artist', 'N/A')):
+    for artist, artist_group in itertools.groupby(songs_page, key=lambda s: s.get('artist', 'N/A')):
         st.markdown(f"## 🎸 {artist}")
         artist_songs = list(artist_group)
         for album, album_group in itertools.groupby(artist_songs, key=lambda s: s.get('album', 'N/A')):

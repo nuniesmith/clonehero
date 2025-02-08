@@ -29,7 +29,9 @@ def delete_song(song_id):
         return {"error": str(e)}
 
 def database_explorer_page():
-    """Streamlit page to explore, search, and delete songs from the database."""
+    """Streamlit page to explore, search, and delete songs from the database.
+    All sidebar functionality is handled in app.py.
+    """
     st.title("📁 Song Database Explorer")
 
     # Search and Pagination State
@@ -49,7 +51,7 @@ def database_explorer_page():
             st.write(f"**Album:** {song.get('album', 'Unknown')}")
             st.write(f"**File Path:** `{song.get('file_path', 'N/A')}`")
 
-            # Show Metadata
+            # Show Metadata if available
             metadata = song.get("metadata", {})
             if metadata:
                 with st.expander("🔎 View Metadata"):
@@ -73,7 +75,6 @@ def database_explorer_page():
         if st.button("⬅️ Previous", disabled=page == 0):
             st.session_state.page = max(page - 1, 0)
             st.rerun()
-
     with col3:
         if st.button("Next ➡️", disabled=len(songs) < PAGE_SIZE):
             st.session_state.page = page + 1

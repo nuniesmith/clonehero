@@ -51,6 +51,7 @@ def backgrounds_page():
     """
     Streamlit UI for managing backgrounds.
     Allows users to upload Image/Video backgrounds and view existing uploads.
+    All sidebar functionality is handled in app.py.
     """
     st.title("🎨 Backgrounds Manager")
 

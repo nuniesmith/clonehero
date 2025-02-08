@@ -52,7 +52,9 @@ def delete_highway(hw_type, highway_name):
     """Delete a highway via API request."""
     try:
         content_type = "image_highways" if hw_type == "Image" else "video_highways"
-        response = requests.delete(f"{API_URL}/delete_content/?content_type={content_type}&file={highway_name}", timeout=30)
+        response = requests.delete(
+            f"{API_URL}/delete_content/?content_type={content_type}&file={highway_name}", timeout=30
+        )
         response.raise_for_status()
         st.toast(f"🗑️ Deleted {highway_name}", icon="🗑️")
         st.rerun()
