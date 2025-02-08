@@ -4,18 +4,32 @@ import asyncio
 import signal
 import requests
 from loguru import logger
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configuration
 API_URL = os.getenv("API_URL", "http://clonehero_api:8000")
 DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() == "true"
 
 # Logging setup
-LOG_FILE = "/app/logs/worker.log"
-os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)  # Ensure log directory exists
-logger.add(LOG_FILE, rotation="10MB", retention=5, compression="zip", level="DEBUG")
+LOG_DIR = os.getenv("LOG_DIR", "/app/logs")
+LOG_FILE = os.path.join(LOG_DIR, "worker.log")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
+LOG_FILE_SIZE = os.getenv("LOG_FILE_SIZE", "10MB")
+LOG_RETENTION = os.getenv("LOG_RETENTION", "5")
+LOG_COMPRESSION = os.getenv("LOG_COMPRESSION", "zip")
+
+# Ensure log directory exists
+os.makedirs(LOG_DIR, exist_ok=True)
+
+# Configure Loguru logging
+logger.add(LOG_FILE, rotation=LOG_FILE_SIZE, retention=LOG_RETENTION, compression=LOG_COMPRESSION, level=LOG_LEVEL)
 
 if DEBUG_MODE:
     logger.add(sys.stdout, level="DEBUG")
+    logger.debug("🚀 Running in DEBUG mode")
 
 # Global control for worker loop
 RUNNING = True

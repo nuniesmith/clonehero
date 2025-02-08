@@ -1,15 +1,24 @@
 import streamlit as st
 import requests
 from loguru import logger
+from dotenv import load_dotenv
+import os
+
+# Load environment variables
+load_dotenv()
+
+# Import page components
 from src.pages.song_processing import song_processing_page
 from src.pages.song_manager import song_manager_page
 from src.pages.database_explorer import database_explorer_page
 from src.pages.colors import colors_page
 from src.pages.backgrounds import backgrounds_page
 from src.pages.highways import highways_page
-from src.utils import API_URL
 
-# App Configuration
+# Read API URL from environment variable
+API_URL = os.getenv("API_URL", "http://clonehero_api:8000")
+
+# Configure Streamlit App
 st.set_page_config(
     page_title="Clone Hero Manager",
     page_icon="🎸",
@@ -27,9 +36,13 @@ def setup_sidebar():
     # API Connection Status
     try:
         response = requests.get(f"{API_URL}/health", timeout=5)
-        api_status = "🟢 API Online" if response.status_code == 200 else "🔴 API Offline"
-    except requests.RequestException:
+        if response.status_code == 200:
+            api_status = "🟢 API Online"
+        else:
+            api_status = "🔴 API Offline"
+    except requests.RequestException as e:
         api_status = "🔴 API Offline"
+        logger.error(f"❌ Failed to connect to API: {e}")
 
     st.sidebar.write(f"**Status:** {api_status}")
 

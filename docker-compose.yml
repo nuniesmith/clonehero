@@ -3,10 +3,10 @@ services:
     container_name: clonehero_nginx
     image: nuniesmith/clonehero:nginx
     environment:
-      TZ: "America/Toronto"
+      TZ: "${TZ}"
     ports:
-      - "80:80"
-      - "443:443"
+      - "${NGINX_PORT}:80"
+      - "${NGINX_SSL_PORT}:443"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:80 || exit 1"]
       interval: 30s
@@ -21,10 +21,10 @@ services:
     env_file:
       - .env
     environment:
-      TZ: ${TZ}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      TZ: "${TZ}"
+      POSTGRES_USER: "${DB_USER}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+      POSTGRES_DB: "${DB_NAME}"
     ports:
       - "${DB_PORT}:5432"
     volumes:
@@ -43,13 +43,11 @@ services:
     volumes:
       - ./data/clonehero_content:/var/syncthing/clonehero_content:rw
     ports:
-      - "8384:8384"
-      - "22000:22000/tcp"
-      - "21027:21027/udp"
+      - "${SYNC_PORT}:8384"
     restart: unless-stopped
     command: ["-home", "/var/syncthing/config"]
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8384 || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:${SYNC_PORT} || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -58,7 +56,7 @@ services:
     container_name: ch_server
     image: nuniesmith/clonehero:server
     ports:
-      - "14242:14242"
+      - "${CH_SERVER_PORT}:14242"
     restart: unless-stopped
 
   backend:
@@ -69,14 +67,18 @@ services:
         condition: service_healthy
       api:
         condition: service_healthy
+      sync:
+        condition: service_healthy
+      ch_server:
+        condition: service_started
     env_file:
       - .env
     expose:
-      - "8001"
+      - "${BACKEND_PORT}"
     command: ["sh", "-c", "sleep 5 && python src/worker.py"]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl --fail http://localhost:8001/health || exit 1"]
+      test: ["CMD-SHELL", "curl --fail http://localhost:${BACKEND_PORT}/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -90,9 +92,9 @@ services:
     env_file:
       - .env
     command: >
-      gunicorn -w 4 -k uvicorn.workers.UvicornWorker src.main:app --bind 0.0.0.0:8000
+      gunicorn -w 4 -k uvicorn.workers.UvicornWorker src.main:app --bind 0.0.0.0:${API_PORT}
     healthcheck:
-      test: ["CMD", "sh", "-c", "curl --fail http://localhost:8000/health || exit 1"]
+      test: ["CMD", "sh", "-c", "curl --fail http://localhost:${API_PORT}/health || exit 1"]
       interval: 30s
       start_period: 60s
       retries: 3
@@ -107,17 +109,20 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./:/app
+      - ./frontend:/app/frontend
     env_file:
       - .env
     ports:
-      - "8501:8501"
+      - "${FRONTEND_PORT}:8501"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl --fail http://localhost:8501 || exit 1"]
+      test: ["CMD-SHELL", "curl --fail http://localhost:${FRONTEND_PORT} || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
 
 volumes:
   pg_data:
+    driver: local
+  logs:
+    driver: local

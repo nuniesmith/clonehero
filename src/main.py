@@ -7,6 +7,10 @@ from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 from loguru import logger
 from psycopg2 import OperationalError, errors
+from dotenv import load_dotenv  # Load environment variables from .env
+
+# Load environment variables
+load_dotenv()
 
 # Ensure the module can be found by adding its root directory to `sys.path`
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
@@ -21,16 +25,29 @@ from src.routes.song_manager import router as song_upload_router
 from src.routes.health import router as health_router
 from src.routes.database_explorer import router as database_explorer_router
 
-# Ensure logs directory exists before setting up logging
+# Read environment variables
 LOG_DIR = os.getenv("LOG_DIR", "/app/logs")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
+LOG_FILE_SIZE = os.getenv("LOG_FILE_SIZE", "10MB")
+LOG_RETENTION = os.getenv("LOG_RETENTION", "7 days")
+
+DB_URL = os.getenv("DB_URL")
+DB_RETRY_ATTEMPTS = int(os.getenv("DB_RETRY_ATTEMPTS", 10))
+DB_RETRY_DELAY = int(os.getenv("DB_RETRY_DELAY", 5))
+
+APP_ENV = os.getenv("APP_ENV", "development")
+APP_PORT = int(os.getenv("APP_PORT", 8000))
+APP_HOST = os.getenv("APP_HOST", "0.0.0.0")
+
+# Ensure logs directory exists before setting up logging
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # Configure Loguru logging (logging to file and console)
 LOG_FILE = os.path.join(LOG_DIR, "app.log")
-logger.add(LOG_FILE, rotation="10MB", retention="7 days", level="DEBUG")
+logger.add(LOG_FILE, rotation=LOG_FILE_SIZE, retention=LOG_RETENTION, level=LOG_LEVEL)
 logger.add(sys.stdout, level="INFO")
 
-async def wait_for_db(max_retries=10, base_delay=5):
+async def wait_for_db(max_retries=DB_RETRY_ATTEMPTS, base_delay=DB_RETRY_DELAY):
     """Wait for the database to be ready before initializing."""
     for attempt in range(max_retries):
         try:

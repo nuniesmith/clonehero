@@ -10,3 +10,4 @@ requests
 pydantic
 librosa
 aiofiles
+python-dotenv

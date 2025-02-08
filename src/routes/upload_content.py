@@ -2,16 +2,25 @@ from fastapi import APIRouter, File, UploadFile, Form, HTTPException, Request
 import os
 import aiofiles
 import tempfile
+import asyncio
 from loguru import logger
+from dotenv import load_dotenv
 from typing import Dict, Any
 from src.services.content_utils import extract_content
+
+# Load environment variables
+load_dotenv()
 
 router = APIRouter()
 
 # Allowed content types
 ALLOWED_CONTENT_TYPES = {"backgrounds", "colors", "highways"}
 ALLOWED_EXTENSIONS = {".zip", ".rar", ".png", ".jpg"}
-MAX_FILE_SIZE_MB = 100  # Limit max file size (e.g., 100MB)
+
+# File size limits
+MAX_FILE_SIZE_GB = int(os.getenv("MAX_FILE_SIZE_GB", 10))
+MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_GB * 1024 * 1024 * 1024
+MAX_FILE_SIZE_MB = MAX_FILE_SIZE_BYTES / (1024 * 1024)
 
 def get_secure_temp_file(file_name: str) -> str:
     """Generate a secure temp file path to avoid overwrites."""
@@ -26,7 +35,7 @@ def validate_file(file: UploadFile):
         raise HTTPException(status_code=400, detail=f"Invalid file extension: {ext}")
 
     file.file.seek(0, os.SEEK_END)
-    size_in_mb = file.file.tell() / (1024 * 1024)
+    size_in_mb = file.file.tell() / (1024 * 1024)  # Convert to MB
     file.file.seek(0)  # Reset file pointer
 
     if size_in_mb > MAX_FILE_SIZE_MB:
@@ -55,30 +64,34 @@ async def upload_content(
         raise HTTPException(status_code=400, detail=f"Invalid content type: {content_type}")
 
     validate_file(file)
-    temp_file_path = get_secure_temp_file(file.filename)
+    temp_file_path = None  # Ensure this variable is always defined
 
     logger.info(
-        f"Received upload from {request.client.host} for content_type={content_type}, file={file.filename}"
+        f"📤 Received upload from {request.client.host} for content_type={content_type}, file={file.filename}"
     )
 
     try:
+        temp_file_path = get_secure_temp_file(file.filename)
+
         async with aiofiles.open(temp_file_path, "wb") as buffer:
-            while chunk := await file.read(1024 * 1024):  # Read in 1MB chunks
+            while chunk := await file.read(65536):  # Read in 64KB chunks
                 await buffer.write(chunk)
 
-        logger.info(f"File saved temporarily at: {temp_file_path}")
-        result = extract_content(temp_file_path, content_type)
+        logger.info(f"✅ File saved temporarily at: {temp_file_path}")
+
+        result = await asyncio.to_thread(extract_content, temp_file_path, content_type)
 
         if "error" in result:
-            logger.error(f"Extraction error for {file.filename}: {result['error']}")
+            logger.error(f"❌ Extraction error for {file.filename}: {result['error']}")
             raise HTTPException(status_code=400, detail=result["error"])
 
         return result
 
     except Exception as e:
-        logger.exception(f"Error processing file {file.filename}: {e}")
+        logger.exception(f"❌ Error processing file {file.filename}: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
     finally:
-        if os.path.exists(temp_file_path):
+        if temp_file_path and os.path.exists(temp_file_path):
             os.remove(temp_file_path)
+            logger.info(f"🗑️ Removed temporary file: {temp_file_path}")

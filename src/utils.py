@@ -3,21 +3,32 @@ import sys
 import streamlit as st
 from loguru import logger
 import requests
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configure Loguru logging
 LOG_DIR = os.getenv("LOG_DIR", "/app/logs")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
+LOG_FILE_SIZE = os.getenv("LOG_FILE_SIZE", "10MB")
+LOG_RETENTION = os.getenv("LOG_RETENTION", "5")
+LOG_COMPRESSION = os.getenv("LOG_COMPRESSION", "zip")
+
 os.makedirs(LOG_DIR, exist_ok=True)
 
 LOG_FILE = os.path.join(LOG_DIR, "streamlit_app.log")
-logger.add(LOG_FILE, rotation="10MB", retention=5, compression="zip", level="DEBUG")
+logger.add(LOG_FILE, rotation=LOG_FILE_SIZE, retention=LOG_RETENTION, compression=LOG_COMPRESSION, level=LOG_LEVEL)
 
-# Enable console logging only in development mode
+# Enable console logging only in debug mode
 DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() == "true"
 if DEBUG_MODE:
     logger.add(sys.stdout, level="DEBUG")
+    logger.debug("🚀 Running in DEBUG mode")
 
-# The base API URL for your FastAPI app, configurable via environment variable
+# API Base URL
 API_URL = os.getenv("API_URL", "http://clonehero_api:8000")
+logger.info(f"🌐 API Base URL: {API_URL}")
 
 def make_api_request(endpoint: str, method="GET", data=None, files=None, params=None):
     """
