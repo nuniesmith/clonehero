@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     curl \
-    unrar \
     p7zip-full \
+    p7zip-rar \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
@@ -39,8 +39,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     curl \
-    unrar \
     p7zip-full \
+    p7zip-rar \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
@@ -65,5 +65,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 # Switch to non-root user
 USER appuser
 
-# Start the worker (Celery Example)
+# Start the worker
 CMD ["/opt/venv/bin/python", "src/backend/worker.py"]
