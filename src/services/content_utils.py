@@ -6,9 +6,11 @@ import uuid
 import tempfile
 import asyncio
 import aiofiles
+from src.database import get_connection
+from psycopg2.extras import DictCursor
 from loguru import logger
 from dotenv import load_dotenv
-from typing import Dict, Any
+from typing import Dict, Any, List
 from src.services.content_manager import process_and_store_content
 
 # Load environment variables
@@ -102,3 +104,26 @@ async def extract_content(file_path: str, content_type: str) -> Dict[str, Any]:
 
     finally:
         shutil.rmtree(temp_extract_dir, ignore_errors=True)  # Cleanup temp dir even on failure
+        
+def list_all_content() -> List[Dict[str, Any]]:
+    """List all stored content (songs, backgrounds, highways, colors)."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor(cursor_factory=DictCursor) as cursor:
+                cursor.execute("SELECT * FROM songs")
+                content = cursor.fetchall()
+
+        return [
+            {
+                "id": row["id"],
+                "title": row["title"],
+                "artist": row["artist"],
+                "album": row["album"],
+                "file_path": row["file_path"],
+                "metadata": row["metadata"] if row["metadata"] else {}
+            }
+            for row in content
+        ]
+    except Exception as e:
+        logger.exception(f"❌ Error listing content: {e}")
+        return []

@@ -52,7 +52,7 @@ def parse_song_ini(ini_path: Path) -> Dict[str, Any]:
     }
 
 def add_content_to_db(title: str, artist: str, album: str, file_path: str, metadata: dict = None) -> int:
-    """Insert content into the PostgreSQL database and return its ID."""
+    """Insert content into the database and return its ID."""
     metadata = metadata or {}
 
     try:
@@ -64,7 +64,9 @@ def add_content_to_db(title: str, artist: str, album: str, file_path: str, metad
                 )
                 existing_song = cursor.fetchone()
                 if existing_song:
-                    logger.warning(f"⚠️ Duplicate detected, skipping insert: {file_path}")
+                    if not getattr(add_content_to_db, "logged", False):  # Prevent duplicate logs
+                        logger.warning(f"⚠️ Duplicate detected, skipping insert: {file_path}")
+                        add_content_to_db.logged = True  # Mark logged to prevent duplicates
                     return existing_song[0]
 
                 cursor.execute(
@@ -83,7 +85,7 @@ def add_content_to_db(title: str, artist: str, album: str, file_path: str, metad
         logger.exception(f"❌ Error inserting content: {e}")
         return -1
 
-def process_and_store_content(temp_extract_dir: str, content_type: str) -> List[Dict[str, Any]]:
+async def process_and_store_content(temp_extract_dir: str, content_type: str) -> List[Dict[str, Any]]:
     """Process and store content, including songs and visual assets."""
     from src.services.content_utils import get_final_directory  # Import inside function to prevent circular imports
 
@@ -149,27 +151,4 @@ def fetch_content_from_db(skip: int = 0, limit: int = 50) -> List[Dict[str, Any]
         ]
     except Exception as e:
         logger.exception(f"❌ Error fetching content: {e}")
-        return []
-    
-def list_all_content() -> List[Dict[str, Any]]:
-    """List all stored content (songs, backgrounds, highways, colors)."""
-    try:
-        with get_connection() as conn:
-            with conn.cursor(cursor_factory=DictCursor) as cursor:
-                cursor.execute("SELECT * FROM songs")
-                content = cursor.fetchall()
-
-        return [
-            {
-                "id": row["id"],
-                "title": row["title"],
-                "artist": row["artist"],
-                "album": row["album"],
-                "file_path": row["file_path"],
-                "metadata": row["metadata"] if row["metadata"] else {}
-            }
-            for row in content
-        ]
-    except Exception as e:
-        logger.exception(f"❌ Error listing content: {e}")
         return []

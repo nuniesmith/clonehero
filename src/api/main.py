@@ -3,6 +3,7 @@ import sys
 import asyncio
 import random
 import time
+from pathlib import Path
 from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 from loguru import logger
@@ -25,7 +26,7 @@ from src.routes.health import router as health_router
 from src.routes.database_explorer import router as database_explorer_router
 
 # Read environment variables
-LOG_DIR = os.getenv("LOG_DIR", "/app/logs")
+LOG_DIR = Path(os.getenv("LOG_DIR", "logs"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
 LOG_FILE_SIZE = os.getenv("LOG_FILE_SIZE", "10MB")
 LOG_RETENTION = os.getenv("LOG_RETENTION", "7 days")
@@ -39,10 +40,10 @@ APP_PORT = int(os.getenv("APP_PORT", 8000))
 APP_HOST = os.getenv("APP_HOST", "0.0.0.0")
 
 # Ensure logs directory exists before setting up logging
-os.makedirs(LOG_DIR, exist_ok=True)
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Configure Loguru logging (logging to file and console)
-LOG_FILE = os.path.join(LOG_DIR, "app.log")
+LOG_FILE = LOG_DIR / "app.log"
 logger.add(LOG_FILE, rotation=LOG_FILE_SIZE, retention=LOG_RETENTION, level=LOG_LEVEL)
 logger.add(sys.stdout, level="INFO")
 
@@ -51,7 +52,7 @@ async def wait_for_db(max_retries=DB_RETRY_ATTEMPTS, base_delay=DB_RETRY_DELAY):
     for attempt in range(max_retries):
         try:
             logger.info(f"🔄 Attempting DB connection ({attempt + 1}/{max_retries})...")
-            init_db()  # Directly call init_db() instead of using asyncio.to_thread()
+            init_db()
             logger.success("✅ Database initialized successfully.")
             return
         except (OperationalError, errors.DatabaseError) as e:
@@ -60,9 +61,10 @@ async def wait_for_db(max_retries=DB_RETRY_ATTEMPTS, base_delay=DB_RETRY_DELAY):
             await asyncio.sleep(delay_time)
         except Exception as e:
             logger.critical(f"❌ Unexpected error while connecting to DB: {e}")
-            return  # Don't exit, just fail gracefully
+            raise e
     
     logger.error("❌ Database connection failed after multiple attempts.")
+    raise RuntimeError("Database connection failed after multiple retries.")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -78,16 +80,21 @@ def create_app() -> FastAPI:
     # Middleware for logging requests
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
+        """Middleware to log incoming API requests and their responses."""
         start_time = time.time()
-        logger.info(f"📥 Incoming request: {request.method} {request.url}")
+        response = None  # Ensure response is always defined
+        
         try:
             response = await call_next(request)
         except Exception as e:
-            logger.error(f"❌ Unhandled error: {e}")
-            raise e
+            logger.error(f"❌ Unhandled error in request {request.method} {request.url}: {e}")
+            response = None  # Ensure response is defined in case of an error
+            raise e  # Re-raise the exception after logging
         finally:
             duration = round(time.time() - start_time, 3)
-            logger.info(f"📤 {request.method} {request.url} - {response.status_code} [{duration}s]")
+            status_code = response.status_code if response else 500  # Default to 500 if response is None
+            logger.info(f"📤 {request.method} {request.url} - {status_code} [{duration}s]")
+
         return response
 
     # Register API routes

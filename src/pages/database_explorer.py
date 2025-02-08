@@ -63,23 +63,20 @@ def database_explorer_page():
             if metadata:
                 non_empty_metadata = {k: v for k, v in metadata.items() if v}  # Hide empty fields
                 if non_empty_metadata:
-                    with st.expander("🔎 View Metadata"):
-                        st.json(non_empty_metadata, expanded=False)
+                    st.json(non_empty_metadata, expanded=False)
 
             # Delete Button
-            col1, col2 = st.columns([3, 1])
-            with col2:
-                if st.button("🗑️ Delete", key=f"delete_{song['id']}"):
-                    with st.spinner("Deleting song..."):
-                        result = delete_song(song["id"])
-                    if "error" in result:
-                        st.error(f"❌ Error deleting song: {result['error']}")
-                    else:
-                        st.success("✅ Song deleted successfully!")
-                        st.rerun()
+            if st.button("🗑️ Delete", key=f"delete_{song['id']}"):
+                with st.spinner("Deleting song..."):
+                    result = delete_song(song["id"])
+                if "error" in result:
+                    st.error(f"❌ Error deleting song: {result['error']}")
+                else:
+                    st.success("✅ Song deleted successfully!")
+                    st.rerun()
 
     # Pagination Controls
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1, col3 = st.columns([1, 1])
     with col1:
         if st.button("⬅️ Previous", disabled=st.session_state.page == 0):
             st.session_state.page = max(st.session_state.page - 1, 0)
@@ -91,35 +88,21 @@ def database_explorer_page():
 
     # Divider
     st.markdown("---")
-
-    ### **📖 How It Works Section**
     st.subheader("📖 How It Works")
     st.write(
         """
         ### **Step-by-Step Guide**
-        1️⃣ **Search for a Song**
-           - Use the **search bar** to find songs by **title, artist, or album**.  
-           - Supports **partial matches** (e.g., searching "Metal" will find "Metallica").  
+        1️⃣ **Search for a Song** - Use the **search bar** to find songs by **title, artist, or album**.
         
-        2️⃣ **View Song Details**
-           - Click on a song to **expand its metadata**.  
-           - See its **title, artist, album, file path, and additional metadata**.  
+        2️⃣ **View Song Details** - Click on a song to **expand its metadata**.
         
-        3️⃣ **Delete a Song (Admin Only)**
-           - Click **🗑️ Delete** to remove a song from the database.  
-           - **⚠️ This action is permanent and cannot be undone!**  
-
-        ### **🔍 Features**
+        3️⃣ **Delete a Song (Admin Only)** - Click **🗑️ Delete** to remove a song from the database.
+        
+        ### **Features**
         ✅ **Search and Filter Songs**  
-        ✅ **Pagination Support** - Browse through **large song libraries**.  
-        ✅ **View Full Metadata** for each song.  
-        ✅ **Admin Controls** - **Delete unwanted songs** with a single click.  
-
-        ### **🛠️ When to Use This?**
-        - **Curate your Clone Hero library** by removing unwanted songs.  
-        - **Fix metadata issues** by viewing song details.  
-        - **Check uploaded song paths** for troubleshooting.  
+        ✅ **Pagination Support**  
+        ✅ **View Full Metadata**  
+        ✅ **Admin Controls**  
         """
     )
-
     st.info("💡 Need help? Try searching by artist name, album, or song title.")
