@@ -42,25 +42,26 @@ def display_songs():
         return
 
     # Pagination State
+    if "page" not in st.session_state:
+        st.session_state.page = 0
     total_pages = (len(songs) + PAGE_SIZE - 1) // PAGE_SIZE
-    page = st.session_state.get("page", 0)
-
+    
     # Pagination Controls
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("⬅️ Previous", disabled=page == 0):
-            st.session_state.page = max(page - 1, 0)
+        if st.button("⬅️ Previous", disabled=st.session_state.page == 0):
+            st.session_state.page = max(st.session_state.page - 1, 0)
             st.rerun()
 
     with col3:
-        if st.button("Next ➡️", disabled=(page + 1) >= total_pages):
-            st.session_state.page = page + 1
+        if st.button("Next ➡️", disabled=(st.session_state.page + 1) >= total_pages):
+            st.session_state.page += 1
             st.rerun()
 
-    st.subheader(f"📚 Song Library (Page {page + 1}/{total_pages})")
-
-    songs_page = songs[page * PAGE_SIZE : (page + 1) * PAGE_SIZE]  # Paginate
-
+    st.subheader(f"📚 Song Library (Page {st.session_state.page + 1}/{total_pages})")
+    
+    songs_page = songs[st.session_state.page * PAGE_SIZE : (st.session_state.page + 1) * PAGE_SIZE]
+    
     songs_page.sort(key=lambda s: (s.get('artist', 'N/A').lower(),
                                    s.get('album', 'N/A').lower(),
                                    s.get('title', 'N/A').lower()))
@@ -94,19 +95,17 @@ def upload_song():
         files = {"file": uploaded_file}
         data = {"content_type": "songs"}
 
-        progress_bar = st.progress(0)
         with st.spinner("Uploading song..."):
             try:
                 response = requests.post(f"{API_URL}/upload_content/", files=files, data=data, timeout=60)
-                progress_bar.progress(100)
-
+                
                 if response.status_code == 200:
                     resp_json = response.json()
                     if "error" in resp_json:
                         st.error(f"Upload error: {resp_json['error']}")
                         logger.error(f"Upload error: {resp_json['error']}")
                     else:
-                        st.toast("✅ Song uploaded successfully!", icon="✅")
+                        st.success("✅ Song uploaded successfully!")
                         logger.success(f"Successfully uploaded: {uploaded_file.name}")
                         st.rerun()
                 else:
@@ -115,50 +114,15 @@ def upload_song():
             except Exception as e:
                 display_exception(e, f"An error occurred while uploading {uploaded_file.name}")
 
-def download_song():
-    """Handles song download UI."""
-    st.header("📥 Download a Song via URL")
-    song_url = st.text_input("Enter song download URL (zip/rar)")
-    
-    if st.button("Download"):
-        if song_url:
-            logger.info(f"Downloading from URL: {song_url}")
-            progress_bar = st.progress(0)
-
-            try:
-                with st.spinner("Downloading song..."):
-                    response = requests.post(f"{API_URL}/download/", json={"url": song_url}, timeout=60)
-                    progress_bar.progress(100)
-
-                if response.status_code == 200:
-                    resp_json = response.json()
-                    if "error" in resp_json:
-                        st.error(f"Download error: {resp_json['error']}")
-                        logger.error(f"Download error: {resp_json['error']}")
-                    else:
-                        st.toast("✅ Song downloaded successfully!", icon="🎵")
-                        logger.success(f"Downloaded successfully from: {song_url}")
-                        st.rerun()
-                else:
-                    st.error(f"Download failed: {response.text}")
-                    logger.error(f"Download failed from {song_url}, Status Code: {response.status_code}")
-            except Exception as e:
-                display_exception(e, f"An error occurred while downloading from {song_url}")
-        else:
-            st.warning("⚠️ Please enter a valid URL.")
-
 def song_manager_page():
     """Streamlit UI for managing Clone Hero songs."""
     st.title("🎶 Clone Hero Song Manager")
 
-    # Tabs for Upload, Download, and Library
-    tab1, tab2, tab3 = st.tabs(["📤 Upload", "📥 Download", "🎼 Song Library"])
+    # Tabs for Upload and Library
+    tab1, tab2 = st.tabs(["📤 Upload", "🎼 Song Library"])
 
     with tab1:
         upload_song()
 
     with tab2:
-        download_song()
-
-    with tab3:
         display_songs()

@@ -34,12 +34,20 @@ def database_explorer_page():
     """
     st.title("📁 Song Database Explorer")
 
+    # Initialize Session State for Pagination
+    if "page" not in st.session_state:
+        st.session_state.page = 0
+
     # Search and Pagination State
     search_query = st.text_input("🔍 Search for a song (title, artist, album)", "")
-    page = st.session_state.get("page", 0)
+
+    # Reset pagination when a new search is performed
+    if search_query != st.session_state.get("last_search", ""):
+        st.session_state.page = 0
+        st.session_state.last_search = search_query
 
     # Fetch Songs
-    songs = fetch_songs(search_query, limit=PAGE_SIZE, offset=page * PAGE_SIZE)
+    songs = fetch_songs(search_query, limit=PAGE_SIZE, offset=st.session_state.page * PAGE_SIZE)
 
     if not songs:
         st.warning("⚠️ No songs found in the database.")
@@ -54,8 +62,10 @@ def database_explorer_page():
             # Show Metadata if available
             metadata = song.get("metadata", {})
             if metadata:
-                with st.expander("🔎 View Metadata"):
-                    st.json(metadata, expanded=False)
+                non_empty_metadata = {k: v for k, v in metadata.items() if v}  # Hide empty fields
+                if non_empty_metadata:
+                    with st.expander("🔎 View Metadata"):
+                        st.json(non_empty_metadata, expanded=False)
 
             # Delete Button
             col1, col2 = st.columns([3, 1])
@@ -64,7 +74,7 @@ def database_explorer_page():
                     with st.spinner("Deleting song..."):
                         result = delete_song(song["id"])
                     if "error" in result:
-                        st.error(f"Error deleting song: {result['error']}")
+                        st.error(f"❌ Error deleting song: {result['error']}")
                     else:
                         st.success("✅ Song deleted successfully!")
                         st.rerun()
@@ -72,10 +82,10 @@ def database_explorer_page():
     # Pagination Controls
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("⬅️ Previous", disabled=page == 0):
-            st.session_state.page = max(page - 1, 0)
+        if st.button("⬅️ Previous", disabled=st.session_state.page == 0):
+            st.session_state.page = max(st.session_state.page - 1, 0)
             st.rerun()
     with col3:
         if st.button("Next ➡️", disabled=len(songs) < PAGE_SIZE):
-            st.session_state.page = page + 1
+            st.session_state.page += 1
             st.rerun()

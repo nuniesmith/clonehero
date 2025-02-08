@@ -23,12 +23,8 @@ def upload_color_profile(uploaded_file):
         files = {"file": uploaded_file}
         data = {"content_type": "colors"}
 
-        progress_bar = st.progress(0)
         with st.spinner("Uploading..."):
-            response = requests.post(
-                f"{API_URL}/upload_content/", files=files, data=data, timeout=60
-            )
-            progress_bar.progress(100)
+            response = requests.post(f"{API_URL}/upload_content/", files=files, data=data, timeout=60)
 
         if response.status_code == 200:
             resp_json = response.json()
@@ -36,7 +32,7 @@ def upload_color_profile(uploaded_file):
                 st.error(f"Upload failed: {resp_json['error']}")
                 logger.error(f"Server error: {resp_json['error']}")
             else:
-                st.toast("✅ Color profile uploaded successfully!", icon="🎨")
+                st.success("✅ Color profile uploaded successfully!")
                 st.rerun()  # Refresh UI to show newly uploaded profiles
         else:
             st.error(f"Upload failed: {response.text}")
@@ -47,15 +43,13 @@ def upload_color_profile(uploaded_file):
 def delete_color_profile(profile_name):
     """Delete a color profile via API request."""
     try:
-        response = requests.delete(
-            f"{API_URL}/delete_content/?content_type=colors&file={profile_name}", timeout=30
-        )
+        response = requests.delete(f"{API_URL}/delete_content/?content_type=colors&file={profile_name}", timeout=30)
         response.raise_for_status()
-        st.toast(f"🗑️ Deleted {profile_name}", icon="🗑️")
+        st.success(f"🗑️ Deleted `{profile_name}` successfully!")
         st.rerun()
     except requests.RequestException as e:
         logger.error(f"Failed to delete {profile_name}: {e}")
-        st.error(f"Failed to delete {profile_name}")
+        st.error(f"Failed to delete `{profile_name}`. Please try again.")
 
 def colors_page():
     """Streamlit UI for managing color profiles."""
@@ -79,7 +73,7 @@ def colors_page():
             with col1:
                 st.markdown(f"- `{profile}`")
             with col2:
-                if st.button("🗑️ Delete", key=f"delete_{profile}"):
+                if st.button("🗑️ Delete", key=f"delete_{hash(profile)}"):
                     delete_color_profile(profile)
     else:
         st.info("No color profiles found.")

@@ -27,12 +27,10 @@ def upload_highway(uploaded_file, hw_type):
         files = {"file": uploaded_file}
         data = {"content_type": "image_highways" if hw_type == "Image" else "video_highways"}
 
-        progress_bar = st.progress(0)
         with st.spinner("Uploading..."):
             response = requests.post(
                 f"{API_URL}/upload_content/", files=files, data=data, timeout=60
             )
-            progress_bar.progress(100)
 
         if response.status_code == 200:
             resp_json = response.json()
@@ -40,7 +38,7 @@ def upload_highway(uploaded_file, hw_type):
                 st.error(f"Upload failed: {resp_json['error']}")
                 logger.error(f"Server error: {resp_json['error']}")
             else:
-                st.toast("✅ Highway uploaded successfully!", icon="🛣️")
+                st.success("✅ Highway uploaded successfully!")
                 st.rerun()  # Refresh UI to show newly uploaded highways
         else:
             st.error(f"Upload failed: {response.text}")
@@ -56,11 +54,11 @@ def delete_highway(hw_type, highway_name):
             f"{API_URL}/delete_content/?content_type={content_type}&file={highway_name}", timeout=30
         )
         response.raise_for_status()
-        st.toast(f"🗑️ Deleted {highway_name}", icon="🗑️")
+        st.success(f"🗑️ Deleted `{highway_name}` successfully!")
         st.rerun()
     except requests.RequestException as e:
         logger.error(f"Failed to delete {highway_name}: {e}")
-        st.error(f"Failed to delete {highway_name}")
+        st.error(f"Failed to delete `{highway_name}`. Please try again.")
 
 def highways_page():
     """Streamlit UI for managing highways."""
@@ -89,7 +87,7 @@ def highways_page():
                     with col1:
                         st.markdown(f"- `{highway}`")
                     with col2:
-                        if st.button("🗑️ Delete", key=f"delete_{highway}"):
+                        if st.button("🗑️ Delete", key=f"delete_{hash(highway)}"):
                             delete_highway(hw_type, highway)
             else:
                 st.info(f"No {hw_type.lower()} highways found.")

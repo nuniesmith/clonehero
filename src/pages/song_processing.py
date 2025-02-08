@@ -7,7 +7,7 @@ def process_song(file):
     """Uploads a song to the backend for processing into Clone Hero format."""
     try:
         files = {"file": file}
-        with st.progress(20, text="Uploading song..."):
+        with st.spinner("Uploading and processing song..."):
             response = requests.post(f"{API_URL}/process_song/", files=files, timeout=60)
         response.raise_for_status()
         return response.json()
@@ -23,7 +23,7 @@ def song_processing_page():
     # Upload song file
     st.header("📤 Upload a Song for Processing")
     uploaded_file = st.file_uploader(
-        "Choose a song file (mp3, wav, opus, flac, ogg)", 
+        "Choose a song file (MP3, WAV, OPUS, FLAC, OGG)", 
         type=["mp3", "wav", "opus", "flac", "ogg"]
     )
 
@@ -39,19 +39,29 @@ def song_processing_page():
             st.success("✅ Song processed successfully!")
             st.write(f"🎵 **Generated Notes Chart:** `{result.get('notes_chart', 'N/A')}`")
             st.write(f"🎶 **Detected Tempo:** `{result.get('tempo', 'Unknown')} BPM`")
-            st.download_button(
-                "⬇️ Download notes.chart",
-                data=requests.get(result["notes_chart"]).content,
-                file_name="notes.chart",
-                mime="text/plain"
-            )
+            
+            # Ensure download URL is valid before requesting
+            notes_chart_url = result.get("notes_chart")
+            if notes_chart_url:
+                response = requests.get(notes_chart_url)
+                if response.status_code == 200:
+                    st.download_button(
+                        "⬇️ Download notes.chart",
+                        data=response.content,
+                        file_name="notes.chart",
+                        mime="text/plain"
+                    )
+                else:
+                    st.error("⚠️ Failed to retrieve the generated notes.chart file.")
 
     st.markdown("---")
     st.subheader("📖 How It Works")
-    st.write("""
-    1️⃣ Upload a song file (MP3, WAV, OPUS, FLAC, OGG).  
-    2️⃣ The system analyzes the song, detects tempo, and generates notes.  
-    3️⃣ Download the generated `notes.chart` file for Clone Hero!  
-    """)
+    st.write(
+        """
+        1️⃣ Upload a song file (MP3, WAV, OPUS, FLAC, OGG).  
+        2️⃣ The system analyzes the song, detects tempo, and generates notes.  
+        3️⃣ Download the generated `notes.chart` file for Clone Hero!  
+        """
+    )
 
     st.info("💡 Need help? Ensure the file format is correct and try again.")

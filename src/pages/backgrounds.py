@@ -26,12 +26,10 @@ def upload_background(uploaded_file, bg_type):
         files = {"file": uploaded_file}
         data = {"content_type": "image_backgrounds" if bg_type == "Image" else "video_backgrounds"}
 
-        progress_bar = st.progress(0)
         with st.spinner("Uploading..."):
             response = requests.post(
                 f"{API_URL}/upload_content/", files=files, data=data, timeout=60
             )
-            progress_bar.progress(100)
 
         if response.status_code == 200:
             resp_json = response.json()
@@ -39,7 +37,7 @@ def upload_background(uploaded_file, bg_type):
                 st.error(f"Upload failed: {resp_json['error']}")
                 logger.error(f"Server error: {resp_json['error']}")
             else:
-                st.toast("✅ Background uploaded successfully!", icon="🎨")
+                st.success("✅ Background uploaded successfully!")
                 st.rerun()  # Refresh UI to show newly uploaded backgrounds
         else:
             st.error(f"Upload failed: {response.text}")
@@ -51,7 +49,6 @@ def backgrounds_page():
     """
     Streamlit UI for managing backgrounds.
     Allows users to upload Image/Video backgrounds and view existing uploads.
-    All sidebar functionality is handled in app.py.
     """
     st.title("🎨 Backgrounds Manager")
 
