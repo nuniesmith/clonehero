@@ -5,9 +5,6 @@ from pathlib import Path
 from loguru import logger
 from typing import Dict, Any
 
-# Import service manager instead of content_utils
-from src.services.service_manager import store_content
-
 OUTPUT_DIR = Path("processed_songs")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -55,6 +52,10 @@ def process_song_file(file_path: str) -> Dict[str, Any]:
         notes_chart_path = song_output_dir / "notes.chart"
 
         generate_notes_chart(song_name, beat_times, notes_chart_path)
+
+        # Import store_content inside function to avoid circular imports
+        from src.services.service_manager import store_content
+        store_content(str(song_output_dir), "song")
 
         return {
             "message": "Song processed successfully",

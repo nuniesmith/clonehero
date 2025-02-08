@@ -1,6 +1,6 @@
 import streamlit as st
-from src.pages.song_generator import song_processing_page
-from src.pages.songs import song_manager_page
+from src.pages.song_generator import song_generation_page
+from src.pages.songs import songs_page
 from src.pages.database_explorer import database_explorer_page
 from src.pages.colors import colors_page
 from src.pages.backgrounds import backgrounds_page
@@ -27,8 +27,8 @@ def setup_sidebar(service_statuses):
     st.sidebar.markdown("### 📂 Navigation")
     PAGES = {
         "📁 Database Explorer": database_explorer_page,
-        "📤 Upload Songs": song_manager_page,
-        "🎵 Generate Songs": song_processing_page,
+        "📤 Upload Songs": songs_page,
+        "🎵 Generate Songs": song_generation_page,
         "🎨 Colors": colors_page,
         "🌆 Backgrounds": backgrounds_page,
         "🛣️ Highways": highways_page,
