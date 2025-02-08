@@ -12,3 +12,4 @@ librosa
 aiofiles
 python-dotenv
 httpx
+rarfile
