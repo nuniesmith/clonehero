@@ -19,9 +19,8 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from src.database import init_db
 
 # Import routers
-from src.routes.upload_content import router as upload_router
-from src.routes.song_processing import router as song_processing_router
-from src.routes.song_manager import router as song_upload_router
+from src.routes.content_manager import router as content_manager_router
+from src.routes.song_generator import router as song_processing_router
 from src.routes.health import router as health_router
 from src.routes.database_explorer import router as database_explorer_router
 
@@ -93,11 +92,10 @@ def create_app() -> FastAPI:
 
     # Register API routes
     routers = [
-        upload_router,
+        content_manager_router,
         health_router,
         database_explorer_router,
         song_processing_router,
-        song_upload_router,
     ]
     for router in routers:
         app.include_router(router, prefix="")

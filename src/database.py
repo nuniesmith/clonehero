@@ -4,6 +4,7 @@ from psycopg2 import pool, OperationalError, errors
 from loguru import logger
 from contextlib import contextmanager
 from dotenv import load_dotenv
+import time
 
 # Load environment variables
 load_dotenv()
@@ -19,25 +20,35 @@ DB_PORT = os.getenv("DB_PORT", "5432")
 # Database connection pool
 db_pool = None
 
-try:
-    if DB_URL:
-        logger.info("🔗 Using DB_URL for connection.")
-        db_pool = pool.SimpleConnectionPool(minconn=1, maxconn=10, dsn=DB_URL)
-    else:
-        logger.info("🔗 Using individual DB settings for connection.")
-        db_pool = pool.SimpleConnectionPool(
-            minconn=1,
-            maxconn=10,
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            port=DB_PORT,
-        )
-    logger.success("✅ Database connection pool initialized successfully.")
-except Exception as e:
-    logger.critical(f"❌ Failed to initialize database pool: {e}")
+def create_db_pool(retries=5, delay=5):
+    """Creates a database connection pool with retry logic."""
+    global db_pool
+    for attempt in range(retries):
+        try:
+            if DB_URL:
+                logger.info("🔗 Using DB_URL for connection.")
+                db_pool = pool.SimpleConnectionPool(minconn=1, maxconn=10, dsn=DB_URL)
+            else:
+                logger.info("🔗 Using individual DB settings for connection.")
+                db_pool = pool.SimpleConnectionPool(
+                    minconn=1,
+                    maxconn=10,
+                    host=DB_HOST,
+                    database=DB_NAME,
+                    user=DB_USER,
+                    password=DB_PASSWORD,
+                    port=DB_PORT,
+                )
+            logger.success("✅ Database connection pool initialized successfully.")
+            return
+        except Exception as e:
+            logger.warning(f"⚠️ Database connection attempt {attempt + 1}/{retries} failed: {e}")
+            time.sleep(delay)
+    
+    logger.critical("❌ Failed to initialize database pool after retries!")
     db_pool = None  # Prevent errors when calling get_connection()
+
+create_db_pool()
 
 @contextmanager
 def get_connection():
@@ -62,9 +73,15 @@ def get_connection():
 def execute_sql_file(sql_file: str):
     """Executes an SQL file with better error handling."""
     try:
+        with open(sql_file, "r", encoding="utf-8") as f:
+            sql_commands = f.read().strip()
+            if not sql_commands:
+                logger.warning(f"⚠️ Skipping empty SQL file: {sql_file}")
+                return
+        
         with get_connection() as conn:
-            with conn.cursor() as cursor, open(sql_file, "r", encoding="utf-8") as f:
-                cursor.execute(f.read())
+            with conn.cursor() as cursor:
+                cursor.execute(sql_commands)
             conn.commit()
             logger.info(f"✅ Successfully executed SQL file: {sql_file}")
     except (OperationalError, errors.DatabaseError) as e:
@@ -74,7 +91,6 @@ def init_db():
     """Initializes the database schema and triggers."""
     logger.info("🚀 Initializing database...")
     execute_sql_file("/app/src/sql/schema.sql")
-    execute_sql_file("/app/src/sql/triggers.sql")
     logger.success("🎉 Database initialization completed successfully.")
 
 if __name__ == "__main__":

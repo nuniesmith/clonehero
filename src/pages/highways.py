@@ -63,6 +63,10 @@ def delete_highway(hw_type, highway_name):
 def highways_page():
     """Streamlit UI for managing highways."""
     st.title("🛣️ Highway Manager")
+    st.write(
+        "Upload and manage **highways** for Clone Hero! Highways are visual elements used in the game background "
+        "during gameplay, enhancing the playing experience."
+    )
 
     tab1, tab2 = st.tabs(["🖼️ Image Highways", "🎥 Video Highways"])
 
@@ -91,3 +95,34 @@ def highways_page():
                             delete_highway(hw_type, highway)
             else:
                 st.info(f"No {hw_type.lower()} highways found.")
+
+    st.markdown("---")
+    st.subheader("📖 How It Works")
+    st.write(
+        """
+        ### **Step-by-Step Guide**
+        1️⃣ **Choose a Highway Type**
+           - **Image Highways:** Upload **PNG, JPG, JPEG, ZIP, RAR**.  
+           - **Video Highways:** Upload **WEBM, ZIP, RAR** (videos must be `.webm` format).  
+
+        2️⃣ **Upload Your Highway**
+           - The system will store the highway and make it available for use.  
+           - You can manage multiple highways at once.  
+
+        3️⃣ **Manage and Delete Highways**
+           - View your uploaded highways in the list below.  
+           - **Delete old highways** with a single click.  
+
+        ### **🔍 Features**
+        ✅ **Supports Both Image & Video Highways**  
+        ✅ **Batch Upload via ZIP/RAR** for multiple highways at once.  
+        ✅ **Easy Management** - Delete and update highways quickly.  
+
+        ### **🎮 Why Use Custom Highways?**
+        - **Personalize your game experience** with unique backgrounds.  
+        - **Match themes and colors** to your favorite songs.  
+        - **Create high-contrast visuals** for better note visibility.  
+        """
+    )
+
+    st.info("💡 Need help? Make sure your file format is correct and try again.")   

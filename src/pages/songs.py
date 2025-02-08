@@ -11,16 +11,16 @@ MAX_FILE_SIZE_GB = 10
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_GB * 1024 * 1024 * 1024  # 10GB limit
 
 @st.cache_data(ttl=300)
-def fetch_songs():
+def fetch_songs(skip=0, limit=PAGE_SIZE):
     """Fetch song list from the API with pagination."""
     try:
-        logger.info("Fetching song list from API.")
-        response = requests.get(f"{API_URL}/songs/", timeout=30)
+        logger.info(f"Fetching song list from API (skip={skip}, limit={limit}).")
+        response = requests.get(f"{API_URL}/content/", params={"skip": skip, "limit": limit}, timeout=30)
         response.raise_for_status()
         data = response.json()
 
-        if isinstance(data, dict) and "songs" in data:
-            songs = data["songs"]
+        if isinstance(data, dict) and "content" in data:
+            songs = data["content"]
         elif isinstance(data, list):
             songs = data
         else:
@@ -36,16 +36,18 @@ def fetch_songs():
 
 def display_songs():
     """Display songs grouped by artist and album with pagination."""
-    songs = fetch_songs()
+    songs = fetch_songs(st.session_state.page * PAGE_SIZE, PAGE_SIZE)
     if not songs:
         st.info("No songs found in the library.")
         return
 
+    total_songs = len(songs)
+    total_pages = (total_songs + PAGE_SIZE - 1) // PAGE_SIZE
+
     # Pagination State
     if "page" not in st.session_state:
         st.session_state.page = 0
-    total_pages = (len(songs) + PAGE_SIZE - 1) // PAGE_SIZE
-    
+
     # Pagination Controls
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
@@ -60,13 +62,11 @@ def display_songs():
 
     st.subheader(f"📚 Song Library (Page {st.session_state.page + 1}/{total_pages})")
     
-    songs_page = songs[st.session_state.page * PAGE_SIZE : (st.session_state.page + 1) * PAGE_SIZE]
+    songs.sort(key=lambda s: (s.get('artist', 'N/A').lower(),
+                              s.get('album', 'N/A').lower(),
+                              s.get('title', 'N/A').lower()))
     
-    songs_page.sort(key=lambda s: (s.get('artist', 'N/A').lower(),
-                                   s.get('album', 'N/A').lower(),
-                                   s.get('title', 'N/A').lower()))
-    
-    for artist, artist_group in itertools.groupby(songs_page, key=lambda s: s.get('artist', 'N/A')):
+    for artist, artist_group in itertools.groupby(songs, key=lambda s: s.get('artist', 'N/A')):
         st.markdown(f"## 🎸 {artist}")
         artist_songs = list(artist_group)
         for album, album_group in itertools.groupby(artist_songs, key=lambda s: s.get('album', 'N/A')):
@@ -92,12 +92,13 @@ def upload_song():
             return
         
         logger.info(f"Uploading file: {uploaded_file.name}")
-        files = {"file": uploaded_file}
-        data = {"content_type": "songs"}
+        
+        files = {"file": (uploaded_file.name, uploaded_file, "application/octet-stream")}
+        data = {"content_type": "songs"}  # Ensure this matches the API expectation
 
         with st.spinner("Uploading song..."):
             try:
-                response = requests.post(f"{API_URL}/upload_content/", files=files, data=data, timeout=60)
+                response = requests.post(f"{API_URL}/upload_content/", files=files, data=data, timeout=300)
                 
                 if response.status_code == 200:
                     resp_json = response.json()
@@ -114,7 +115,7 @@ def upload_song():
             except Exception as e:
                 display_exception(e, f"An error occurred while uploading {uploaded_file.name}")
 
-def song_manager_page():
+def songs_page():
     """Streamlit UI for managing Clone Hero songs."""
     st.title("🎶 Clone Hero Song Manager")
 
@@ -126,3 +127,33 @@ def song_manager_page():
 
     with tab2:
         display_songs()
+
+    # Add information on how the system works
+    st.markdown("---")
+    st.subheader("📖 How It Works")
+    st.write(
+        """
+        ### **Step-by-Step Process**
+        1️⃣ **Upload a Song Archive (.zip or .rar)**  
+           - The system accepts **.zip** or **.rar** files containing Clone Hero-compatible songs.  
+           - The uploaded archive must contain a `song.ini` file with metadata.
+        
+        2️⃣ **Automatic Song Processing**  
+           - The system extracts the archive and processes the `song.ini` file.  
+           - Metadata such as **title, artist, album, and difficulty levels** are read.  
+           - The song is automatically stored in the appropriate **artist/album folder**.
+
+        3️⃣ **Database Storage & Organization**  
+           - All songs are stored in a PostgreSQL database.  
+           - Song metadata is saved, and duplicate entries are **automatically detected and skipped**.
+
+        4️⃣ **View & Manage Your Songs**  
+           - Browse uploaded songs in the **Song Library tab**.  
+           - Use pagination to navigate **large collections**.
+
+        5️⃣ **Download Processed Files (Future Feature)**  
+           - A feature will be added to allow **downloading converted files** in Clone Hero format.  
+        """
+    )
+
+    st.info("💡 Need help? Ensure the file format is correct, and try again. If issues persist, check the server logs.")   

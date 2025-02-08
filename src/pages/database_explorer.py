@@ -29,10 +29,9 @@ def delete_song(song_id):
         return {"error": str(e)}
 
 def database_explorer_page():
-    """Streamlit page to explore, search, and delete songs from the database.
-    All sidebar functionality is handled in app.py.
-    """
+    """Streamlit page to explore, search, and delete songs from the database."""
     st.title("📁 Song Database Explorer")
+    st.write("Manage and explore the Clone Hero song database.")
 
     # Initialize Session State for Pagination
     if "page" not in st.session_state:
@@ -89,3 +88,38 @@ def database_explorer_page():
         if st.button("Next ➡️", disabled=len(songs) < PAGE_SIZE):
             st.session_state.page += 1
             st.rerun()
+
+    # Divider
+    st.markdown("---")
+
+    ### **📖 How It Works Section**
+    st.subheader("📖 How It Works")
+    st.write(
+        """
+        ### **Step-by-Step Guide**
+        1️⃣ **Search for a Song**
+           - Use the **search bar** to find songs by **title, artist, or album**.  
+           - Supports **partial matches** (e.g., searching "Metal" will find "Metallica").  
+        
+        2️⃣ **View Song Details**
+           - Click on a song to **expand its metadata**.  
+           - See its **title, artist, album, file path, and additional metadata**.  
+        
+        3️⃣ **Delete a Song (Admin Only)**
+           - Click **🗑️ Delete** to remove a song from the database.  
+           - **⚠️ This action is permanent and cannot be undone!**  
+
+        ### **🔍 Features**
+        ✅ **Search and Filter Songs**  
+        ✅ **Pagination Support** - Browse through **large song libraries**.  
+        ✅ **View Full Metadata** for each song.  
+        ✅ **Admin Controls** - **Delete unwanted songs** with a single click.  
+
+        ### **🛠️ When to Use This?**
+        - **Curate your Clone Hero library** by removing unwanted songs.  
+        - **Fix metadata issues** by viewing song details.  
+        - **Check uploaded song paths** for troubleshooting.  
+        """
+    )
+
+    st.info("💡 Need help? Try searching by artist name, album, or song title.")

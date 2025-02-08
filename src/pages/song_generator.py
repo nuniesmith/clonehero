@@ -15,7 +15,7 @@ def process_song(file):
         logger.error(f"Failed to process song: {e}")
         return {"error": str(e)}
 
-def song_processing_page():
+def song_generation_page():
     """Streamlit UI for processing songs into Clone Hero format."""
     st.title("🎸 Clone Hero Song Processor")
     st.write("Upload a song file, and we'll process it into Clone Hero format!")
@@ -58,10 +58,25 @@ def song_processing_page():
     st.subheader("📖 How It Works")
     st.write(
         """
-        1️⃣ Upload a song file (MP3, WAV, OPUS, FLAC, OGG).  
-        2️⃣ The system analyzes the song, detects tempo, and generates notes.  
-        3️⃣ Download the generated `notes.chart` file for Clone Hero!  
+        ### **Step-by-Step Process**
+        1️⃣ **Upload a Song File**  
+           - Supported formats: **MP3, WAV, OPUS, FLAC, OGG**.  
+           - The file is analyzed for **tempo, beat detection, and key recognition**.  
+
+        2️⃣ **Automatic Note Generation**  
+           - The system detects **BPM (beats per minute)** and extracts rhythm patterns.  
+           - **AI-powered** note generation maps the song structure to Clone Hero format.  
+
+        3️⃣ **Download & Play**  
+           - Once processing is complete, you can download the **notes.chart** file.  
+           - The file is **Clone Hero-compatible** and ready to be played!  
+
+        ### **🔍 Features of the Processor**
+        ✅ **Automatic Charting** based on tempo and rhythm analysis.  
+        ✅ **Supports Multi-Instrument Tracks** (future expansion).  
+        ✅ **Handles Variable Tempos** using advanced time signature detection.  
+        ✅ **Error Detection & Prevention** to avoid incorrect mappings.  
         """
     )
 
-    st.info("💡 Need help? Ensure the file format is correct and try again.")
+    st.info("💡 Need help? Ensure the file format is correct, and try again. If issues persist, check the server logs.")   

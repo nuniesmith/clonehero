@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from pathlib import Path
 import aiofiles
-from src.services.song_processing import process_song_file
+from src.services.song_generator import process_song_file
 from loguru import logger
 
 router = APIRouter()

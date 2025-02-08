@@ -8,15 +8,15 @@ import asyncio
 import aiofiles
 from loguru import logger
 from dotenv import load_dotenv
-from typing import Dict, Any
-from src.services.song_manager import organize_and_add_songs
-from src.services.song_processing import process_song_file
+from typing import Dict, Any, List
+from src.services.content_manager import organize_and_add_songs
+from src.services.song_generator import process_song_file
 
 # Load environment variables
 load_dotenv()
 
 # Base directory for Clone Hero content
-CONTENT_BASE_DIR = os.getenv("CONTENT_BASE_DIR", "/app/data/clonehero_content")
+CONTENT_BASE_DIR = os.getenv("CONTENT_BASE_DIR", "/app/data/clonehero_content").rstrip("/")
 
 if not CONTENT_BASE_DIR:
     logger.warning("⚠️ CONTENT_BASE_DIR is not set in .env. Using default: /app/data/clonehero_content")
@@ -42,16 +42,18 @@ def get_final_directory(content_type: str) -> str:
     
     return final_dir
 
-async def process_extracted_songs(songs: list) -> list:
-    """Process extracted songs with song processing service asynchronously."""
+async def process_extracted_songs(songs: List[dict]) -> List[dict]:
+    """Process extracted songs asynchronously using the song processing service."""
     processed_songs = []
+    
     for song in songs:
         song_path = song.get("folder_path")
         if song_path:
             logger.info(f"🎵 Processing extracted song: {song_path}")
-            result = await asyncio.to_thread(process_song_file, song_path)  # Run sync function in separate thread
+            result = await asyncio.to_thread(process_song_file, song_path)
             song["processing_result"] = result
             processed_songs.append(song)
+    
     return processed_songs
 
 async def store_extracted_content(temp_extract_dir: str, content_type: str) -> Dict[str, Any]:
@@ -63,29 +65,33 @@ async def store_extracted_content(temp_extract_dir: str, content_type: str) -> D
             dst_path = os.path.join(final_dir, item)
 
             if os.path.isdir(src_path):
-                shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
+                shutil.move(src_path, dst_path)  # Move directories instead of copying
             else:
                 async with aiofiles.open(src_path, "rb") as src_file, aiofiles.open(dst_path, "wb") as dst_file:
                     await dst_file.write(await src_file.read())
 
+        shutil.rmtree(temp_extract_dir, ignore_errors=True)  # Cleanup temp directory
         return {"message": f"✅ Stored extracted content in {final_dir}"}
     except Exception as e:
         logger.exception(f"❌ Error storing extracted content: {e}")
         return {"error": str(e)}
 
-async def extract_archive(file_path: str, extract_dir: str, file_ext: str):
+async def extract_archive(file_path: str, extract_dir: str, file_ext: str) -> Dict[str, Any]:
     """Extracts .zip or .rar archives to a specified directory asynchronously."""
     try:
         if file_ext == ".zip":
             with zipfile.ZipFile(file_path, "r") as zip_ref:
                 zip_ref.extractall(extract_dir)
         elif file_ext == ".rar":
-            await asyncio.to_thread(patoolib.extract_archive, file_path, outdir=extract_dir)
+            await asyncio.wait_for(asyncio.to_thread(patoolib.extract_archive, file_path, outdir=extract_dir), timeout=300)
         else:
             logger.error(f"🚨 Unsupported file format: {file_path}")
             return {"error": "Unsupported file format"}
         
         return {"success": True}
+    except asyncio.TimeoutError:
+        logger.error(f"⏳ Extraction timeout for {file_path}")
+        return {"error": "Extraction took too long"}
     except Exception as e:
         logger.exception(f"❌ Error extracting archive {file_path}: {e}")
         return {"error": str(e)}
@@ -100,35 +106,39 @@ async def extract_content(file_path: str, content_type: str) -> Dict[str, Any]:
     base_name, ext = os.path.splitext(file_name)
     temp_extract_dir = os.path.join(tempfile.gettempdir(), f"extract_{uuid.uuid4().hex[:6]}")
 
-    if ext.lower() in [".zip", ".rar"]:
-        os.makedirs(temp_extract_dir, exist_ok=True)
-        logger.info(f"📦 Extracting {file_path} to {temp_extract_dir}")
+    try:
+        if ext.lower() in [".zip", ".rar"]:
+            os.makedirs(temp_extract_dir, exist_ok=True)
+            logger.info(f"📦 Extracting {file_path} to {temp_extract_dir}")
 
-        extract_result = await extract_archive(file_path, temp_extract_dir, ext.lower())
-        if "error" in extract_result:
-            return extract_result
+            extract_result = await extract_archive(file_path, temp_extract_dir, ext.lower())
+            if "error" in extract_result:
+                return extract_result
 
-        os.remove(file_path)  # Delete original archive after extraction
+            os.remove(file_path)  # Delete original archive after extraction
 
-        if content_type == "songs":
-            songs = await asyncio.to_thread(organize_and_add_songs, temp_extract_dir)
-            processed_songs = await process_extracted_songs(songs)
-            return {"message": f"🎵 Processed {len(processed_songs)} song(s).", "songs": processed_songs}
+            if content_type == "songs":
+                songs = await asyncio.to_thread(organize_and_add_songs, temp_extract_dir)
+                processed_songs = await process_extracted_songs(songs)
+                shutil.rmtree(temp_extract_dir, ignore_errors=True)  # Cleanup temp dir
+                return {"message": f"🎵 Processed {len(processed_songs)} song(s).", "songs": processed_songs}
+            else:
+                return await store_extracted_content(temp_extract_dir, content_type)
+
         else:
-            return await store_extracted_content(temp_extract_dir, content_type)
+            final_dir = get_final_directory(content_type)
+            dst_path = os.path.join(final_dir, file_name)
 
-    else:
-        final_dir = get_final_directory(content_type)
-        dst_path = os.path.join(final_dir, file_name)
+            if content_type == "songs":
+                return {"error": "⚠️ Please upload a .zip or .rar file containing a song.ini"}
 
-        if content_type == "songs":
-            return {"error": "⚠️ Please upload a .zip or .rar file containing a song.ini"}
-
-        try:
             async with aiofiles.open(file_path, "rb") as src_file, aiofiles.open(dst_path, "wb") as dst_file:
                 await dst_file.write(await src_file.read())
 
             return {"message": f"✅ Stored file: {file_name}", "file": dst_path}
-        except Exception as e:
-            logger.exception(f"❌ Error moving file {file_path} to {dst_path}: {e}")
-            return {"error": str(e)}
+
+    except Exception as e:
+        logger.exception(f"❌ Error processing {file_path}: {e}")
+        return {"error": str(e)}
+    finally:
+        shutil.rmtree(temp_extract_dir, ignore_errors=True)  # Cleanup temp dir even on failure

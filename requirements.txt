@@ -11,3 +11,4 @@ pydantic
 librosa
 aiofiles
 python-dotenv
+httpx
