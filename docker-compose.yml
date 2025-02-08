@@ -48,12 +48,15 @@ services:
       - "21027:21027/udp"
     restart: unless-stopped
     command: ["-home", "/var/syncthing/config"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8384 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   ch_server:
     container_name: ch_server
     image: nuniesmith/clonehero:server
-    env_file:
-      - .env
     ports:
       - "14242:14242"
     restart: unless-stopped
@@ -72,6 +75,11 @@ services:
       - "8001"
     command: ["sh", "-c", "sleep 5 && python src/worker.py"]
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:8001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   api:
     container_name: clonehero_api
@@ -105,6 +113,11 @@ services:
     ports:
       - "8501:8501"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:8501 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   pg_data:

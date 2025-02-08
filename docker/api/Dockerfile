@@ -46,14 +46,16 @@ COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app /app
 
 # Create a dedicated non-root user and adjust permissions
-RUN useradd -m appuser && chown -R appuser:appuser /app
+RUN useradd -m appuser && \
+    chown -R appuser:appuser /app && \
+    chmod -R 755 /app
 
 # Expose the API port
 EXPOSE 8000
 
 # Health Check: Ensure the API is responding on port 8000.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/ || exit 1
+    CMD curl --fail http://localhost:8000/health || exit 1
 
 # Switch to the non-root user
 USER appuser

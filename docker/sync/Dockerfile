@@ -18,7 +18,8 @@ WORKDIR /var/syncthing
 RUN addgroup -S syncthinguser && \
     adduser -S -G syncthinguser syncthinguser && \
     mkdir -p /var/syncthing/config && \
-    chown -R syncthinguser:syncthinguser /var/syncthing
+    chown -R syncthinguser:syncthinguser /var/syncthing && \
+    chmod -R 755 /var/syncthing
 
 # Switch to non-root user
 USER syncthinguser
@@ -29,6 +30,10 @@ ENV STNORESTART=1
 
 # Expose necessary ports
 EXPOSE 8384 22000/tcp 21027/udp
+
+# Health Check: Ensure Syncthing UI is accessible
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8384 || exit 1
 
 # Ensure syncthing starts correctly as a non-root user
 ENTRYPOINT ["syncthing", "-home=/var/syncthing/config"]
