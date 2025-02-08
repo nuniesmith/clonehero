@@ -64,4 +64,4 @@ USER appuser
 WORKDIR /app
 
 # Ensure the frontend starts correctly
-CMD ["/opt/venv/bin/streamlit", "run", "src/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["/opt/venv/bin/streamlit", "run", "src/frontend/app.py", "--server.port=8501", "--server.address=0.0.0.0"]

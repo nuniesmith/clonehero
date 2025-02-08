@@ -64,4 +64,4 @@ USER appuser
 WORKDIR /app
 
 # Default Entrypoint: Start Gunicorn with Uvicorn workers for the API
-CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "src.main:app"]
+CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "src.api.main:app"]

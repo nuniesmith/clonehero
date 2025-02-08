@@ -67,4 +67,4 @@ USER appuser
 WORKDIR /app
 
 # Default Entrypoint
-CMD ["/opt/venv/bin/python", "src/worker.py"]
+CMD ["/opt/venv/bin/python", "src/backend/worker.py"]

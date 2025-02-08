@@ -1,8 +1,8 @@
 import streamlit as st
 import os
 from dotenv import load_dotenv
-from src.health_check import get_service_statuses, clear_service_cache
-from src.sidebar import setup_sidebar
+from src.frontend.health_check import get_service_statuses, clear_service_cache
+from src.frontend.sidebar import setup_sidebar
 
 # Load environment variables
 load_dotenv()
