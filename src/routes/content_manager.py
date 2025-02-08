@@ -9,7 +9,8 @@ from loguru import logger
 from dotenv import load_dotenv
 from typing import Dict, Any
 from pydantic import BaseModel
-from src.services.content_manager import extract_content, process_and_store_content, list_all_content
+from src.services.content_manager import process_and_store_content, list_all_content
+from src.services.content_utils import extract_content
 
 # Load environment variables
 load_dotenv()

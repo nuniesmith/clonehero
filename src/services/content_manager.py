@@ -150,3 +150,26 @@ def fetch_content_from_db(skip: int = 0, limit: int = 50) -> List[Dict[str, Any]
     except Exception as e:
         logger.exception(f"❌ Error fetching content: {e}")
         return []
+    
+def list_all_content() -> List[Dict[str, Any]]:
+    """List all stored content (songs, backgrounds, highways, colors)."""
+    try:
+        with get_connection() as conn:
+            with conn.cursor(cursor_factory=DictCursor) as cursor:
+                cursor.execute("SELECT * FROM songs")
+                content = cursor.fetchall()
+
+        return [
+            {
+                "id": row["id"],
+                "title": row["title"],
+                "artist": row["artist"],
+                "album": row["album"],
+                "file_path": row["file_path"],
+                "metadata": row["metadata"] if row["metadata"] else {}
+            }
+            for row in content
+        ]
+    except Exception as e:
+        logger.exception(f"❌ Error listing content: {e}")
+        return []
