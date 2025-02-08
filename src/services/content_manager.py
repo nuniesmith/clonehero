@@ -7,7 +7,6 @@ from loguru import logger
 from typing import List, Dict, Any
 from src.database import get_connection
 from psycopg2.extras import Json, DictCursor
-from src.services import content_utils
 
 # Optional metadata fields for songs
 OPTIONAL_FIELDS = [
@@ -25,17 +24,20 @@ def parse_song_ini(ini_path: Path) -> Dict[str, Any]:
         with ini_path.open("r", encoding="utf-8-sig") as f:
             config.read_file(f)
     except Exception as e:
-        raise ValueError(f"Failed to read {ini_path}: {e}")
+        logger.error(f"❌ Failed to read {ini_path}: {e}")
+        return {}
 
     if not config.has_section("song"):
-        raise ValueError(f"Missing [song] section in {ini_path}")
+        logger.warning(f"⚠️ Missing [song] section in {ini_path}")
+        return {}
 
     name = config.get("song", "name", fallback=None)
     artist = config.get("song", "artist", fallback=None)
     album = config.get("song", "album", fallback=None)
 
     if not name or not artist or not album:
-        raise ValueError(f"Missing required fields in {ini_path}")
+        logger.warning(f"⚠️ Missing required fields in {ini_path}, skipping file.")
+        return {}
 
     metadata = {
         field: config.get("song", field, fallback=None)
@@ -52,7 +54,7 @@ def parse_song_ini(ini_path: Path) -> Dict[str, Any]:
 def add_content_to_db(title: str, artist: str, album: str, file_path: str, metadata: dict = None) -> int:
     """Insert content into the PostgreSQL database and return its ID."""
     metadata = metadata or {}
-    
+
     try:
         with get_connection() as conn:
             with conn.cursor() as cursor:
@@ -62,7 +64,7 @@ def add_content_to_db(title: str, artist: str, album: str, file_path: str, metad
                 )
                 existing_song = cursor.fetchone()
                 if existing_song:
-                    logger.warning(f"Duplicate detected, skipping insert: {file_path}")
+                    logger.warning(f"⚠️ Duplicate detected, skipping insert: {file_path}")
                     return existing_song[0]
 
                 cursor.execute(
@@ -74,44 +76,51 @@ def add_content_to_db(title: str, artist: str, album: str, file_path: str, metad
                 )
                 content_id = cursor.fetchone()[0]
                 conn.commit()
-        
-        logger.success(f"Content added: {title} - {artist} ({album})")
+
+        logger.success(f"✅ Content added: {title} - {artist} ({album})")
         return content_id
     except Exception as e:
-        logger.exception(f"Error inserting content: {e}")
+        logger.exception(f"❌ Error inserting content: {e}")
         return -1
 
 def process_and_store_content(temp_extract_dir: str, content_type: str) -> List[Dict[str, Any]]:
     """Process and store content, including songs and visual assets."""
+    from src.services.content_utils import get_final_directory  # Import inside function to prevent circular imports
+
     stored_content = []
     temp_extract_dir = Path(temp_extract_dir)
 
     for ini_path in temp_extract_dir.rglob("song.ini"):
-        try:
-            parsed = parse_song_ini(ini_path)
-        except Exception as e:
-            logger.error(f"Failed to parse {ini_path}: {e}")
-            continue
+        parsed = parse_song_ini(ini_path)
+        if not parsed:
+            continue  # Skip if parsing failed
 
         title, artist, album, metadata = parsed["title"], parsed["artist"], parsed["album"], parsed["metadata"]
-        artist_dir = Path(content_utils.get_final_directory("songs")) / artist
+
+        # Ensure unique file storage
+        artist_dir = Path(get_final_directory("songs")) / artist
         artist_dir.mkdir(parents=True, exist_ok=True)
         final_dir = artist_dir / f"{title}_{uuid.uuid4().hex[:8]}"
-        shutil.move(str(ini_path.parent), str(final_dir))
-        content_id = add_content_to_db(title, artist, album, str(final_dir), metadata)
 
-        if content_id != -1:
-            stored_content.append({
-                "id": content_id,
-                "title": title,
-                "artist": artist,
-                "album": album,
-                "folder_path": str(final_dir),
-                "metadata": metadata
-            })
+        try:
+            shutil.move(str(ini_path.parent), str(final_dir))
+            content_id = add_content_to_db(title, artist, album, str(final_dir), metadata)
+
+            if content_id != -1:
+                stored_content.append({
+                    "id": content_id,
+                    "title": title,
+                    "artist": artist,
+                    "album": album,
+                    "folder_path": str(final_dir),
+                    "metadata": metadata
+                })
+        except Exception as e:
+            logger.error(f"❌ Error moving file {ini_path.parent} to {final_dir}: {e}")
+    
     return stored_content
 
-def list_all_content(skip: int = 0, limit: int = 50) -> List[Dict[str, Any]]:
+def fetch_content_from_db(skip: int = 0, limit: int = 50) -> List[Dict[str, Any]]:
     """Fetch paginated content from the database."""
     try:
         with get_connection() as conn:
@@ -139,5 +148,5 @@ def list_all_content(skip: int = 0, limit: int = 50) -> List[Dict[str, Any]]:
             for row in content
         ]
     except Exception as e:
-        logger.exception(f"Error fetching content: {e}")
+        logger.exception(f"❌ Error fetching content: {e}")
         return []

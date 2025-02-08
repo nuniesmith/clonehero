@@ -9,8 +9,7 @@ from loguru import logger
 from dotenv import load_dotenv
 from typing import Dict, Any
 from pydantic import BaseModel
-from src.services.content_utils import extract_content
-from src.services.content_manager import list_all_content, process_and_store_content
+from src.services.content_manager import extract_content, process_and_store_content, list_all_content
 
 # Load environment variables
 load_dotenv()
@@ -76,11 +75,11 @@ async def upload_content(
         logger.info(f"✅ File saved temporarily at: {temp_file_path}")
 
         # Extract content and process files
-        result = await asyncio.to_thread(extract_content, temp_file_path, content_type)
+        result = await extract_content(temp_file_path, content_type)
 
         # If songs, organize and add them to the database
         if content_type == "songs":
-            result = await asyncio.to_thread(process_and_store_content, temp_file_path, content_type)
+            result = await process_and_store_content(temp_file_path, content_type)
 
         return result
 
@@ -123,11 +122,11 @@ async def download_and_extract(request: URLDownloadRequest) -> Dict[str, Any]:
         logger.info(f"✅ File downloaded to: {temp_file_path}")
 
         # Extract content
-        result = await asyncio.to_thread(extract_content, temp_file_path, "songs")
+        result = await extract_content(temp_file_path, "songs")
 
         # If songs, process them into the database
         if "songs" in request.url:
-            result = await asyncio.to_thread(process_and_store_content, temp_file_path, "songs")
+            result = await process_and_store_content(temp_file_path, "songs")
 
         return result
 
@@ -149,7 +148,7 @@ async def list_content(skip: int = 0, limit: int = 10) -> Dict[str, Any]:
     List all stored content (songs, backgrounds, highways, colors) with pagination.
     """
     try:
-        content = await asyncio.to_thread(list_all_content)  # Run DB query in a separate thread
+        content = await list_all_content()  # Run DB query asynchronously
         paginated_content = content[skip: skip + limit]
 
         return {
