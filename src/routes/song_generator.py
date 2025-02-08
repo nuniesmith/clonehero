@@ -8,7 +8,7 @@ from src.services.song_generator import process_song_file
 
 router = APIRouter()
 
-OUTPUT_DIR = Path("/app/data/processed_songs")  # Use a persistent directory
+OUTPUT_DIR = Path("/app/data/clonehero_content/generator")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 SUPPORTED_FORMATS = {".mp3", ".ogg", ".wav", ".flac"}

@@ -5,7 +5,7 @@ from pathlib import Path
 from loguru import logger
 from typing import Dict, Any
 
-OUTPUT_DIR = Path("processed_songs")
+OUTPUT_DIR = Path("/app/data/clonehero_content/generator")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 NOTE_MAPPING = 6  # Number of note types in Clone Hero

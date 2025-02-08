@@ -5,23 +5,23 @@ FROM python:3.13-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies needed to compile any native extensions
+# Install dependencies for worker tasks (including RAR extraction)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     curl \
+    unrar \
+    p7zip-full \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a Python virtual environment
+# Create a virtual environment
 RUN python -m venv /opt/venv
 
-# Copy backend-specific requirements and install them into the virtual environment
+# Copy requirements and install them
 COPY requirements.txt /app/requirements.txt
 RUN /opt/venv/bin/pip install --upgrade pip && \
     /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
-
-# Copy the backend application code
-#COPY . /app
 
 ###############################
 # Stage 2: Runtime
@@ -35,36 +35,35 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Install runtime dependencies (if any additional packages are needed)
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     curl \
+    unrar \
+    p7zip-full \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a dedicated non-root user before setting ownership
+# Create a dedicated non-root user
 RUN useradd -m appuser
 
-# Copy the virtual environment and the application code from the builder stage
+# Copy the virtual environment from builder stage
 COPY --from=builder /opt/venv /opt/venv
-#COPY --from=builder /app /app
 
-# Ensure necessary directories exist and set proper ownership
+# Ensure necessary directories exist
 RUN mkdir -p /app/logs && \
     chown -R appuser:appuser /app && \
     chmod -R 755 /app
 
-# Expose port for healthcheck consistency
+# Expose port for monitoring
 EXPOSE 8001
 
-# Health Check: Ensure the backend is responding
+# Health Check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD curl --fail http://localhost:8001/health || exit 1
 
-# Switch to the non-root user
+# Switch to non-root user
 USER appuser
 
-# Set the working directory to the backend code folder
-WORKDIR /app
-
-# Default Entrypoint
+# Start the worker (Celery Example)
 CMD ["/opt/venv/bin/python", "src/backend/worker.py"]
